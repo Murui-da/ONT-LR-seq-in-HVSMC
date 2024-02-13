@@ -7,13 +7,16 @@ library(tidyverse)
 library(reshape2)
 library(data.table)
 library(ggplot2)
-exp_count = fread("Data/Flair/counts_matrix.tsv",sep = "\t",header = T,check.names = F,data.table = F)
-rownames(exp_count) <- exp_count$ids
-exp_count$ids = NULL
+exp_count = fread("~/Data/GSE209739_Illumina_gene_count_matrix.csv",sep = ",",header = T,check.names = F,data.table = F)
+rownames(exp_count) <- exp_count$gene_id
+exp_count$gene_id = exp_count$"m221-1"
+exp_count$"m221-1" = NULL
+colnames(exp_count)[1] <- "221-1"
 group_list <- c(rep("221",4),rep("NC",4),rep("PDGF",4),rep("TGF",4))
 condition <- relevel(factor(group_list),ref = "NC") #set `NC` as reference level
 colData <- data.frame(row.names = colnames(exp_count),
                       condition = condition)
+exp_count[is.na(exp_count)] <- 0
 dds <- DESeqDataSetFromMatrix(countData = exp_count, colData = colData, design = ~ condition)
 dds <- DESeq(dds)
 resultsNames(dds)
@@ -29,7 +32,7 @@ for (i in compare) {
   table(deg$Change)
   deg$transcript_id <- rownames(deg)
   deg <- dplyr::select(deg,transcript_id,everything())
-  write.table(deg,paste0("Result/DESeq/",i),sep = "\t",row.names = F,quote = F)
+  write.table(deg,paste0("~/Data/Result/DESeq/",i),sep = "\t",row.names = F,quote = F)
   # volcano plot
   deg_sig=deg %>%
     arrange(padj) %>% 
@@ -64,8 +67,8 @@ for (i in compare) {
     theme(axis.text = element_text(size = 12, colour = "black"), 
           axis.title= element_text(size = 13, colour = "black"))
   
-  ggsave(plot = p,filename = paste0(paste0("Figure/volcano/",i),".pdf"), width = 15, height = 10)
-  gene_type <- read.table("reference/gencode_v38_genetype.txt",sep = "\t",header = T)
+  ggsave(plot = p,filename = paste0(paste0("~/Data/Figure/volcano/",i),".pdf"), width = 15, height = 10)
+  gene_type <- read.table("~/Data/reference/gencode_v38_genetype.txt",sep = "\t",header = T)
   deg_sig=deg %>%
     arrange(padj) %>% 
     filter(Change != "Stable")
@@ -82,17 +85,17 @@ for (i in compare) {
                  pvalueCutoff = 0.05,
                  pAdjustMethod = "BH")
   p <- dotplot(gg)
-  ggsave(plot = p,filename = paste0(paste0("Figure/GO/",i),".pdf"),width = 10,height = 8)
+  ggsave(plot = p,filename = paste0(paste0("~/Data/Figure/GO/",i),".pdf"),width = 10,height = 8)
   gg <- as.data.frame(gg)
-  write.table(gg,paste0("Result/Enrichment/GO/",i),sep = "\t",quote = F,row.names = F)
+  write.table(gg,paste0("~/Data/Result/Enrichment/GO/",i),sep = "\t",quote = F,row.names = F)
   gene_select <- bitr(gene_select$Gene_name,fromType = "SYMBOL",toType = "ENTREZID",OrgDb = org.Hs.eg.db)
   kk <- enrichKEGG(gene = gene_select$ENTREZID,
                    organism = "hsa",
                    pvalueCutoff = 0.05,
                    pAdjustMethod = "BH")
   p <- dotplot(kk)
-  ggsave(plot = p,filename = paste0(paste0("Figure/KEGG/",i),".pdf"),width = 10,height = 8)
+  ggsave(plot = p,filename = paste0(paste0("~/Data/Figure/KEGG/",i),".pdf"),width = 10,height = 8)
   kk <- setReadable(kk, OrgDb = org.Hs.eg.db, keyType="ENTREZID")
   kk <- as.data.frame(kk)
-  write.table(kk,paste0("Result/Enrichment/KEGG/",i),sep = "\t",quote = F,row.names = F)
+  write.table(kk,paste0("~/Data/Result/Enrichment/KEGG/",i),sep = "\t",quote = F,row.names = F)
 }
